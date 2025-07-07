@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trade Finance Dashboard</title>
+    
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- html2canvas for downloading HTML as image -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
+    <!-- Lucide Icons for iconography (using static version for reliability) -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* Custom styles for the application */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* gray-50 */
+        }
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(17, 24, 39, 0.6); /* gray-900 with opacity */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 50;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .modal-backdrop.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        .modal-content {
+            background-color: white;
+            border-radius: 1rem; /* rounded-xl */
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            width: 90%;
+            max-width: 500px;
+            transform: scale(0.95);
+            transition: transform 0.3s ease;
+        }
+        .modal-backdrop.active .modal-content {
+            transform: scale(1);
+        }
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem; /* gap-x-1.5 */
+            border-radius: 0.375rem; /* rounded-md */
+            padding: 0.25rem 0.5rem; /* px-2 py-1 */
+            font-size: 0.75rem; /* text-xs */
+            font-weight: 500; /* font-medium */
+        }
+        /* Styles for notification dropdown */
+        .notification-dot {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 8px;
+            height: 8px;
+            border-radius: 9999px;
+            background-color: #ef4444; /* red-500 */
+        }
+    </style>
+</head>
+<body>
+    <div id="app" class="container mx-auto p-4 sm:p-6 lg:p-8">
+        <!-- Header -->
+        <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900">Dimuto Trade Finance </h1>
+                <p class="text-md text-gray-600 mt-1">Vibe Coding Challenge: Payment Milestone AI</p>
+            </div>
+            <div class="flex items-center space-x-4 mt-4 sm:mt-0">
+                <div class="relative">
+                    <button id="notificationBtn" class="text-gray-500 hover:text-gray-700">
+                        <i data-lucide="bell"></i>
+                        <span id="notificationDot" class="notification-dot hidden"></span>
+                    </button>
+                    <div id="notificationDropdown" class="hidden absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border z-20">
+                        <!-- Notifications will be rendered here -->
+                    </div>
+                </div>
+                <button id="aiSummaryBtn" class="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition-all flex items-center disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                    <i data-lucide="sparkles" class="mr-2 h-4 w-4"></i> Get AI Summary
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <!-- This grid layout ensures the left/right split on large screens -->
+        <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="lg:col-span-2">
+                <!-- Data Fetcher -->
+                <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-200/80 mb-8">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-1">Select a Trade Contract</h2>
+                    <p class="text-sm text-gray-500 mb-4">Select a contract from the list to load its payment milestones.</p>
+                    <select id="tradeContractSelect" class="block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        <option value="" disabled selected>Loading contracts...</option>
+                    </select>
+                </div>
+
+                <!-- Milestone Content Area -->
+                <div id="content-payments">
+                    <!-- Initial message or loader will be shown here -->
+                </div>
+            </div>
+            
+            <!-- Activity Timeline -->
+            <div id="activity-timeline-container" class="lg:col-span-1">
+                 <!-- Timeline will be rendered here -->
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div id="aiSummaryModal" class="modal-backdrop">
+        <div class="modal-content">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900 flex items-center"><i data-lucide="sparkles" class="mr-2 text-indigo-500"></i>AI Financial Summary</h3>
+                    <button onclick="closeModal('aiSummaryModal')" class="text-gray-400 hover:text-gray-600"><i data-lucide="x" class="h-6 w-6"></i></button>
+                </div>
+                <div id="aiSummaryContent" class="bg-gray-50 p-4 rounded-lg min-h-[150px]"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="certificateModal" class="modal-backdrop">
+        <div class="modal-content">
+            <div id="certificateWrapper"></div> 
+            <div class="p-4 bg-gray-100 flex justify-end space-x-2">
+                <button onclick="closeModal('certificateModal')" class="text-gray-600 bg-white hover:bg-gray-100 border border-gray-300 font-semibold py-2 px-4 rounded-lg transition-all text-sm">Close</button>
+                <button id="downloadCertBtn" class="text-white bg-indigo-600 hover:bg-indigo-700 font-semibold py-2 px-4 rounded-lg transition-all text-sm flex items-center"><i data-lucide="download" class="mr-2 h-4 w-4"></i>Download</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // --- APPLICATION STATE ---
+        let state = {
+            salesMilestones: [],
+            purchaseMilestones: [],
+            activityLog: [],
+            notifications: []
+        };
+        
+        // --- MOCK DATA ---
+        const mockTradeContractList = [
+            { tc_id: 'TCCO0013500408' },
+            { tc_id: 'TCCO0013500409' },
+            { tc_id: 'TC-NO-DATA-003' }
+        ];
+        const mockMilestoneData = {
+            'TCCO0013500408': {
+                sales_milestones: [
+                    { id: 1, milestone_name: '40% against proforma invoice', due_date: '2025-07-15', amount: '4200.00', status: 'Not due', company: 'Dimuto Warehouse' },
+                    { id: 2, milestone_name: '60% upon shipment arrival', due_date: '2025-08-20', amount: '6300.00', status: 'Not due', company: 'Dimuto Warehouse' },
+                ],
+                purchase_milestones: [
+                    { id: 3, milestone_name: 'Payment for freight services', due_date: '2025-07-25', amount: '1500.00', status: 'Not due', company: 'Fruits co' },
+                ]
+            },
+            'TCCO0013500409': {
+                sales_milestones: [
+                    { id: 4, milestone_name: 'Final Payment', due_date: '2025-06-01', amount: '12500.00', status: 'Overdue', company: 'Premium Imports' }
+                ],
+                purchase_milestones: []
+            },
+            'TC-NO-DATA-003': {
+                sales_milestones: [],
+                purchase_milestones: []
+            }
+        };
+
+        // --- UTILITY FUNCTIONS ---
+        const formatCurrency = (amount) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+        const formatDate = (dateString) => new Date(dateString).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+
+        // --- MODAL CONTROLS ---
+        const openModal = (modalId) => document.getElementById(modalId).classList.add('active');
+        const closeModal = (modalId) => document.getElementById(modalId).classList.remove('active');
+        
+        // --- SIMULATED API FETCH ---
+        const fetchTradeContractList = async () => {
+            console.log("Using mock data for trade contract list.");
+            return new Promise(resolve => setTimeout(() => resolve(mockTradeContractList), 500));
+        };
+        const fetchMilestoneData = async (contractId) => {
+            console.log(`Using mock data for milestone: ${contractId}`);
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    const apiData = mockMilestoneData[contractId] || { sales_milestones: [], purchase_milestones: [] };
+                    const transformMilestone = (m) => ({
+                        id: m.id, name: m.milestone_name || 'N/A', dueDate: m.due_date || new Date().toISOString(), amount: parseFloat(m.amount) || 0,
+                        status: m.status || 'Not due', company: m.company || 'N/A', payments: 0, verified: false
+                    });
+                    resolve({
+                        salesMilestones: apiData.sales_milestones.map(transformMilestone),
+                        purchaseMilestones: apiData.purchase_milestones.map(transformMilestone)
+                    });
+                }, 1000);
+            });
+        };
+
+        // --- Activity & Notification Logic ---
+        const logActivity = (message, icon = 'zap') => {
+            state.activityLog.unshift({ message, icon, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) });
+            renderActivityLog();
+        };
+
+        const addNotification = (message, type = 'info') => {
+            state.notifications.push({ message, type });
+            updateNotificationUI();
+        };
+
+        const clearNotifications = () => {
+            state.notifications = [];
+            updateNotificationUI();
+        };
+        
+        // --- RENDERING FUNCTIONS ---
+        const renderMilestoneTable = (title, milestones, containerId) => {
+            const totalInvoiced = milestones.reduce((sum, m) => sum + m.amount, 0);
+            const totalReceived = milestones.filter(m => m.status === 'Paid').reduce((sum, m) => sum + m.amount, 0);
+            const totalOutstanding = totalInvoiced - totalReceived;
+            const getStatusBadge = (status) => {
+                const styles = { 'Overdue': 'bg-red-100 text-red-700', 'Not due': 'bg-yellow-100 text-yellow-700', 'Paid': 'bg-green-100 text-green-700', 'Verifying...': 'bg-blue-100 text-blue-700 animate-pulse', 'Verified': 'bg-indigo-100 text-indigo-700' };
+                return `<span class="status-badge ${styles[status] || ''}">${status}</span>`;
+            };
+            const getActionButtons = (m) => {
+                if (m.status === 'Paid') return `<button onclick="showCertificate(${m.id})" class="flex items-center gap-1 text-blue-600 hover:text-blue-900"><i data-lucide="award" class="h-4 w-4"></i> Certificate</button>`;
+                if (m.status === 'Verified') return `<button onclick="payMilestone(${m.id})" class="flex items-center gap-1 text-green-600 hover:text-green-900"><i data-lucide="check-circle" class="h-4 w-4"></i> Pay Now</button>`;
+                if (m.status === 'Verifying...') return `<button class="flex items-center gap-1 text-indigo-600 opacity-50 cursor-not-allowed"><i data-lucide="loader-2" class="h-4 w-4 animate-spin"></i> Verifying</button>`;
+                return `<button onclick="verifyMilestone(${m.id})" class="flex items-center gap-1 text-indigo-600 hover:text-indigo-900"><i data-lucide="upload" class="h-4 w-4"></i> AI Verify</button>`;
+            };
+            const tableHTML = `<div class="bg-white shadow-lg rounded-xl overflow-hidden mb-8 border border-gray-200/80"><div class="p-6"><h2 class="text-xl font-semibold text-gray-800 mb-4">${title}</h2><div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center sm:text-left mb-6 p-4 bg-gray-50 rounded-lg"><div><p class="text-sm text-gray-500">Total invoiced</p><p class="text-lg font-semibold text-gray-900">${formatCurrency(totalInvoiced)}</p></div><div><p class="text-sm text-gray-500">Total received</p><p class="text-lg font-semibold text-green-600">${formatCurrency(totalReceived)}</p></div><div><p class="text-sm text-gray-500">Total outstanding</p><p class="text-lg font-semibold text-red-600">${formatCurrency(totalOutstanding)}</p></div></div><div class="overflow-x-auto"><table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50"><tr><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Milestone</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th></tr></thead><tbody class="bg-white divide-y divide-gray-200">${milestones.map(m => `<tr><td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800">${m.name}</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatDate(m.dueDate)}</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatCurrency(m.amount)}</td><td class="px-6 py-4 whitespace-nowrap text-sm">${getStatusBadge(m.status)}</td><td class="px-6 py-4 whitespace-nowrap text-sm font-medium">${getActionButtons(m)}</td></tr>`).join('')}</tbody></table></div></div></div>`;
+            document.getElementById(containerId).innerHTML = tableHTML;
+        };
+
+        const renderContent = () => {
+            const container = document.getElementById('content-payments');
+            const hasSalesData = state.salesMilestones && state.salesMilestones.length > 0;
+            const hasPurchaseData = state.purchaseMilestones && state.purchaseMilestones.length > 0;
+            if (!hasSalesData && !hasPurchaseData) {
+                container.innerHTML = `<div class="text-center py-12 bg-white rounded-lg shadow-md border"><i data-lucide="info" class="mx-auto h-12 w-12 text-gray-400"></i><h3 class="mt-2 text-sm font-medium text-gray-900">No payment milestone data found</h3><p class="mt-1 text-sm text-gray-500">This contract ID may have no milestones.</p></div>`;
+                document.getElementById('aiSummaryBtn').disabled = true;
+            } else {
+                container.innerHTML = '';
+                if (hasSalesData) {
+                    const salesContainer = document.createElement('div');
+                    container.appendChild(salesContainer);
+                    renderMilestoneTable('Sales Milestones', state.salesMilestones, salesContainer.id = 'sales-container');
+                }
+                if (hasPurchaseData) {
+                    const purchaseContainer = document.createElement('div');
+                    container.appendChild(purchaseContainer);
+                    renderMilestoneTable('Purchase Milestones', state.purchaseMilestones, purchaseContainer.id = 'purchase-container');
+                }
+                document.getElementById('aiSummaryBtn').disabled = false;
+            }
+            lucide.createIcons();
+        };
+
+        const renderActivityLog = () => {
+            const container = document.getElementById('activity-timeline-container');
+            // NEW: Color mapping for icons
+            const iconColors = {
+                'file-search': { bg: 'bg-blue-100', text: 'text-blue-600' },
+                'scan-line': { bg: 'bg-yellow-100', text: 'text-yellow-600' },
+                'shield-check': { bg: 'bg-green-100', text: 'text-green-600' },
+                'check-circle': { bg: 'bg-green-100', text: 'text-green-600' },
+                'download': { bg: 'bg-purple-100', text: 'text-purple-600' },
+                'brain-circuit': { bg: 'bg-indigo-100', text: 'text-indigo-600' },
+                'zap': { bg: 'bg-gray-100', text: 'text-gray-600' } // default
+            };
+
+            const logItems = state.activityLog.slice(0, 10).map(item => {
+                const colors = iconColors[item.icon] || iconColors['zap'];
+                return `
+                <li class="flex items-start space-x-3 pb-4">
+                    <div class="flex-shrink-0"><span class="flex items-center justify-center h-8 w-8 rounded-full ${colors.bg}"><i data-lucide="${item.icon}" class="h-4 w-4 ${colors.text}"></i></span></div>
+                    <div class="flex-1"><p class="text-sm text-gray-700">${item.message}</p><p class="text-xs text-gray-400">${item.time}</p></div>
+                </li>
+            `}).join('');
+            container.innerHTML = `<div class="bg-white p-6 rounded-xl shadow-lg border border-gray-200/80"><h2 class="text-xl font-semibold text-gray-800 mb-4">Activity Timeline</h2><ul class="list-none">${logItems}</ul></div>`;
+            lucide.createIcons();
+        };
+        
+        const updateNotificationUI = () => {
+            const dot = document.getElementById('notificationDot');
+            const dropdown = document.getElementById('notificationDropdown');
+            if (state.notifications.length > 0) {
+                dot.classList.remove('hidden');
+                const notificationItems = state.notifications.map(n => `
+                    <div class="flex items-start p-3 hover:bg-gray-50 border-b border-gray-100">
+                        <i data-lucide="${n.type === 'alert' ? 'alert-triangle' : 'check-circle'}" class="h-5 w-5 ${n.type === 'alert' ? 'text-red-500' : 'text-green-500'} mr-3 mt-1"></i>
+                        <p class="text-sm text-gray-700">${n.message}</p>
+                    </div>`).join('');
+                dropdown.innerHTML = `<div class="p-3 border-b"><h4 class="font-semibold text-sm">Notifications</h4></div>${notificationItems}`;
+                lucide.createIcons();
+            } else {
+                dot.classList.add('hidden');
+            }
+        };
+
+        const showLoader = () => {
+            const container = document.getElementById('content-payments');
+            container.innerHTML = `<div class="text-center py-12 bg-white rounded-lg shadow-md border"><i data-lucide="loader-2" class="mx-auto h-12 w-12 text-indigo-600 animate-spin"></i><h3 class="mt-2 text-sm font-medium text-gray-900">Fetching data...</h3><p class="mt-1 text-sm text-gray-500">Please wait.</p></div>`;
+            lucide.createIcons();
+        };
+
+        // --- EVENT HANDLERS & LOGIC ---
+        const handleContractSelectChange = async (event) => {
+            const contractId = event.target.value;
+            if (!contractId) return;
+            
+            showLoader();
+            state.activityLog = []; // Clear log for new contract
+            state.notifications = []; // Clear notifications
+            logActivity(`Loaded contract: <strong>${contractId}</strong>`, 'file-search');
+            
+            const data = await fetchMilestoneData(contractId);
+            state = { ...state, ...data };
+            renderContent();
+
+            // Check for overdue items and create notifications
+            const allMilestones = [...state.salesMilestones, ...state.purchaseMilestones];
+            allMilestones.forEach(m => {
+                if (m.status === 'Overdue') {
+                    addNotification(`Payment for "${m.name}" is overdue.`, 'alert');
+                }
+            });
+        };
+        
+        window.verifyMilestone = (id) => {
+            const allMilestones = [...state.salesMilestones, ...state.purchaseMilestones];
+            const milestone = allMilestones.find(m => m.id === id);
+            if (milestone) {
+                milestone.status = 'Verifying...';
+                logActivity(`Verifying milestone: "${milestone.name}"`, 'scan-line');
+                renderContent();
+                setTimeout(() => {
+                    milestone.status = 'Verified';
+                    milestone.verified = true;
+                    logActivity(`Milestone "${milestone.name}" was successfully verified by AI.`, 'shield-check');
+                    renderContent();
+                }, 2000);
+            }
+        };
+
+        window.payMilestone = (id) => {
+            const allMilestones = [...state.salesMilestones, ...state.purchaseMilestones];
+            const milestone = allMilestones.find(m => m.id === id);
+            if (milestone) {
+                milestone.status = 'Paid';
+                milestone.payments = milestone.amount;
+                logActivity(`Paid ${formatCurrency(milestone.amount)} for "${milestone.name}".`, 'check-circle');
+                addNotification(`Successfully paid for "${milestone.name}".`, 'success');
+                renderContent();
+            }
+        };
+
+        window.showCertificate = (id) => {
+            const allMilestones = [...state.salesMilestones, ...state.purchaseMilestones];
+            const milestone = allMilestones.find(m => m.id === id);
+            if (milestone) {
+                const certificateHTML = `<div id="certificateContent" class="p-8 bg-gradient-to-br from-gray-50 to-gray-100"><div class="text-center border-b-2 border-indigo-200 pb-4 mb-4"><i data-lucide="shield-check" class="mx-auto text-green-500 h-16 w-16"></i><h2 class="text-2xl font-bold text-gray-800 mt-2">Payment Approval Certificate</h2><p class="text-sm text-gray-500">Transaction Completed Successfully</p></div><div class="space-y-3 text-sm text-gray-700"><div class="flex justify-between"><span class="font-semibold">Milestone:</span><span>${milestone.name}</span></div><div class="flex justify-between"><span class="font-semibold">Company:</span><span>${milestone.company}</span></div><div class="flex justify-between"><span class="font-semibold">Amount Paid:</span><span class="font-bold text-green-600">${formatCurrency(milestone.amount)}</span></div><div class="flex justify-between"><span class="font-semibold">Settlement Date:</span><span>${formatDate(new Date())}</span></div><div class="flex justify-between"><span class="font-semibold">Transaction ID:</span><span class="font-mono text-xs">TXN-${milestone.id}-${new Date().getTime()}</span></div></div><div class="mt-8 text-center"><p class="text-xs text-gray-400">This certificate confirms the settlement of the above-mentioned payment milestone.</p><p class="text-lg font-semibold text-indigo-600 mt-2">Vibe Coding Finance</p></div></div>`;
+                document.getElementById('certificateWrapper').innerHTML = certificateHTML;
+                document.getElementById('downloadCertBtn').onclick = () => downloadCertificate(milestone.id);
+                lucide.createIcons();
+                openModal('certificateModal');
+            }
+        };
+        
+        window.downloadCertificate = (id) => {
+            logActivity(`Downloaded certificate for transaction ID ${id}.`, 'download');
+            const certificateElement = document.getElementById('certificateContent');
+            if (!certificateElement) return;
+            html2canvas(certificateElement, { scale: 2, useCORS: true }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `Certificate-TXN-${id}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        };
+
+        const handleAIFinancialSummary = () => {
+            logActivity('Viewed AI Financial Summary.', 'brain-circuit');
+            const contentDiv = document.getElementById('aiSummaryContent');
+            contentDiv.innerHTML = `<div class="flex justify-center items-center h-full"><i data-lucide="loader-2" class="h-8 w-8 animate-spin text-indigo-600"></i></div>`;
+            lucide.createIcons();
+            openModal('aiSummaryModal');
+            setTimeout(() => {
+                const allMilestones = [...state.salesMilestones, ...state.purchaseMilestones];
+                const overdue = allMilestones.filter(m => m.status === 'Overdue');
+                const notDue = allMilestones.filter(m => m.status === 'Not due');
+                const summaryText = `<p class="font-semibold text-gray-800 mb-2">Financial Overview:</p><ul class="space-y-2 text-sm"><li class="flex items-start"><i data-lucide="alert-triangle" class="h-4 w-4 text-red-500 mr-2 mt-0.5"></i>You have ${overdue.length} overdue payments totaling ${formatCurrency(overdue.reduce((s, m) => s + m.amount, 0))}.</li><li class="flex items-start"><i data-lucide="clock" class="h-4 w-4 text-yellow-500 mr-2 mt-0.5"></i>There are ${notDue.length} upcoming payments amounting to ${formatCurrency(notDue.reduce((s, m) => s + m.amount, 0))}.</li></ul><p class="text-xs text-gray-500 mt-4">This summary was generated by AI based on your current milestone data.</p>`;
+                contentDiv.innerHTML = summaryText;
+                lucide.createIcons();
+            }, 2500);
+        };
+
+        // --- INITIALIZE APP ---
+        const initializeApp = async () => {
+            const selectElement = document.getElementById('tradeContractSelect');
+            try {
+                const contracts = await fetchTradeContractList();
+                if(contracts && contracts.length > 0) {
+                    selectElement.innerHTML = '<option value="" disabled selected>Select a Trade Contract...</option>';
+                    contracts.forEach(contract => {
+                        const option = document.createElement('option');
+                        option.value = contract.tc_id;
+                        option.textContent = contract.tc_id;
+                        selectElement.appendChild(option);
+                    });
+                } else {
+                     selectElement.innerHTML = '<option value="" disabled selected>No contracts found.</option>';
+                }
+            } catch (error) {
+                selectElement.innerHTML = '<option value="" disabled selected>Error loading contracts.</option>';
+            }
+
+            selectElement.addEventListener('change', handleContractSelectChange);
+            document.getElementById('aiSummaryBtn').addEventListener('click', handleAIFinancialSummary);
+            
+            // Notification Bell Logic
+            const notificationBtn = document.getElementById('notificationBtn');
+            const notificationDropdown = document.getElementById('notificationDropdown');
+            notificationBtn.addEventListener('click', (event) => {
+                event.stopPropagation();
+                if (state.notifications.length > 0) {
+                    notificationDropdown.classList.toggle('hidden');
+                    if (!notificationDropdown.classList.contains('hidden')) {
+                         setTimeout(() => clearNotifications(), 500); // Clear notifications after showing them
+                    }
+                }
+            });
+            document.addEventListener('click', () => notificationDropdown.classList.add('hidden'));
+
+
+            const container = document.getElementById('content-payments');
+            container.innerHTML = `<div class="text-center py-12 bg-white rounded-lg shadow-md border"><i data-lucide="list" class="mx-auto h-12 w-12 text-gray-400"></i><h3 class="mt-2 text-sm font-medium text-gray-900">Ready to start?</h3><p class="mt-1 text-sm text-gray-500">Select a contract from the dropdown above to load its milestones.</p></div>`;
+            renderActivityLog();
+            lucide.createIcons();
+        };
+
+        document.addEventListener('DOMContentLoaded', initializeApp);
+
+    </script>
+</body>
+</html>
