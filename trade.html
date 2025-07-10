@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crypto Profit Calculator with History</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .result-card {
+            transition: all 0.3s ease-in-out;
+            transform-style: preserve-3d;
+        }
+        .result-card.flipped {
+            transform: rotateY(180deg);
+        }
+        .card-face {
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+        }
+        .card-back {
+            transform: rotateY(180deg);
+        }
+        .profit {
+            color: #22c55e; /* green-500 */
+        }
+        .loss {
+            color: #ef4444; /* red-500 */
+        }
+        /* Ensure table has a background in dark mode */
+        table {
+            background-color: #374151; /* gray-700 */
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white flex items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-6xl mx-auto space-y-8">
+        <!-- Calculator Section -->
+        <div class="bg-gray-800 rounded-2xl shadow-2xl p-6 md:p-8">
+            <div class="text-center mb-8">
+                <h1 class="text-3xl md:text-4xl font-bold text-cyan-400">Crypto Profit Calculator</h1>
+                <p class="text-gray-400 mt-2">Instantly calculate your trading profits and losses.</p>
+            </div>
+
+            <!-- Main Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                
+                <!-- Input Form -->
+                <div class="bg-gray-700/50 p-6 rounded-xl">
+                    <h2 class="text-2xl font-semibold mb-6 border-b border-gray-600 pb-3">Trade Details</h2>
+                    <form id="calculatorForm" class="space-y-4">
+                        <div>
+                            <label for="coinName" class="block text-sm font-medium text-gray-300 mb-1">Coin Name</label>
+                            <input type="text" id="coinName" value="ETH" class="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 outline-none transition">
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label for="buyRate" class="block text-sm font-medium text-gray-300 mb-1">Buy Rate ($)</label>
+                                <input type="number" id="buyRate" value="2710" class="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 outline-none transition" placeholder="e.g., 50000">
+                            </div>
+                            <div>
+                                <label for="sellRate" class="block text-sm font-medium text-gray-300 mb-1">Sell Rate ($)</label>
+                                <input type="number" id="sellRate" value="2769" class="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 outline-none transition" placeholder="e.g., 52000">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="amount" class="block text-sm font-medium text-gray-300 mb-1">Investment Amount ($)</label>
+                            <input type="number" id="amount" value="200" class="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 outline-none transition" placeholder="e.g., 1000">
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label for="takerFee" class="block text-sm font-medium text-gray-300 mb-1">Buy Fee (%)</label>
+                                <input type="number" id="takerFee" value="0.1" step="0.01" class="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 outline-none transition">
+                            </div>
+                            <div>
+                                <label for="makerFee" class="block text-sm font-medium text-gray-300 mb-1">Sell Fee (%)</label>
+                                <input type="number" id="makerFee" value="0.1" step="0.01" class="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 outline-none transition">
+                            </div>
+                        </div>
+                         <div class="pt-4 grid grid-cols-2 gap-4">
+                            <button type="button" id="saveButton" class="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-lg transition duration-300">Save Trade</button>
+                            <button type="button" id="resetButton" class="w-full bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg transition duration-300">Reset Form</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Results Display -->
+                <div class="perspective-1000">
+                    <div id="resultCard" class="result-card w-full h-full">
+                        <!-- Front of Card -->
+                        <div class="card-face w-full h-full bg-gray-700/50 p-6 rounded-xl flex flex-col justify-between">
+                            <div>
+                                <h2 class="text-2xl font-semibold mb-4 border-b border-gray-600 pb-3">Results</h2>
+                                <div id="profitResult" class="text-center my-6">
+                                    <p class="text-lg text-gray-400" id="resultLabel">Net Profit / Loss</p>
+                                    <p id="netProfit" class="text-5xl font-bold my-2">$0.00</p>
+                                    <p id="profitPercentage" class="text-xl font-medium text-gray-400">0.00%</p>
+                                </div>
+                            </div>
+                            <button id="detailsButton" class="w-full mt-4 bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-lg transition duration-300">
+                                Show Details
+                            </button>
+                        </div>
+
+                        <!-- Back of Card -->
+                        <div class="card-face card-back w-full h-full bg-gray-700/50 p-6 rounded-xl flex flex-col justify-between">
+                            <div>
+                                <h2 class="text-2xl font-semibold mb-4 border-b border-gray-600 pb-3">Trade Breakdown</h2>
+                                <div class="space-y-3 text-sm">
+                                    <div class="flex justify-between"><span class="text-gray-400">Coin Amount Bought:</span> <span id="coinAmount" class="font-mono">0</span></div>
+                                    <div class="flex justify-between"><span class="text-gray-400">Total Buy Cost:</span> <span id="totalBuyCost" class="font-mono">$0.00</span></div>
+                                    <div class="flex justify-between"><span class="text-gray-400">Gross Sell Value:</span> <span id="grossSellValue" class="font-mono">$0.00</span></div>
+                                    <div class="flex justify-between"><span class="text-gray-400">Sell Fee Paid:</span> <span id="sellFeeValue" class="font-mono">$0.00</span></div>
+                                    <div class="flex justify-between border-t border-gray-600 pt-2 mt-2"><span class="font-bold">Net Sell Value:</span> <span id="netSellValue" class="font-bold font-mono">$0.00</span></div>
+                                </div>
+                            </div>
+                            <button id="backButton" class="w-full mt-4 bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-lg transition duration-300">
+                               Back to Profit
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trade History Section -->
+        <div class="bg-gray-800 rounded-2xl shadow-2xl p-6 md:p-8">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-semibold">Trade History</h2>
+                <button id="clearHistoryButton" class="bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-4 rounded-lg transition duration-300 text-sm">Clear History</button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm text-left text-gray-300">
+                    <thead class="text-xs text-gray-400 uppercase bg-gray-700">
+                        <tr>
+                            <th scope="col" class="px-6 py-3">Coin</th>
+                            <th scope="col" class="px-6 py-3">Buy Rate</th>
+                            <th scope="col" class="px-6 py-3">Sell Rate</th>
+                            <th scope="col" class="px-6 py-3">Investment</th>
+                            <th scope="col" class="px-6 py-3">Net Profit/Loss</th>
+                            <th scope="col" class="px-6 py-3">Profit %</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTableBody">
+                        <!-- History rows will be inserted here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- DOM Element Selection ---
+            const form = document.getElementById('calculatorForm');
+            const coinNameInput = document.getElementById('coinName');
+            const buyRateInput = document.getElementById('buyRate');
+            const sellRateInput = document.getElementById('sellRate');
+            const amountInput = document.getElementById('amount');
+            const takerFeeInput = document.getElementById('takerFee');
+            const makerFeeInput = document.getElementById('makerFee');
+            
+            const saveButton = document.getElementById('saveButton');
+            const resetButton = document.getElementById('resetButton');
+            const clearHistoryButton = document.getElementById('clearHistoryButton');
+
+            const netProfitEl = document.getElementById('netProfit');
+            const profitPercentageEl = document.getElementById('profitPercentage');
+            const resultLabelEl = document.getElementById('resultLabel');
+            
+            const coinAmountEl = document.getElementById('coinAmount');
+            const totalBuyCostEl = document.getElementById('totalBuyCost');
+            const grossSellValueEl = document.getElementById('grossSellValue');
+            const sellFeeValueEl = document.getElementById('sellFeeValue');
+            const netSellValueEl = document.getElementById('netSellValue');
+
+            const resultCard = document.getElementById('resultCard');
+            const detailsButton = document.getElementById('detailsButton');
+            const backButton = document.getElementById('backButton');
+            
+            const historyTableBody = document.getElementById('historyTableBody');
+            
+            const STORAGE_KEY = 'cryptoTradesHistory';
+
+            /**
+             * Calculates trade metrics based on current form inputs.
+             * @returns {object} An object containing all trade details and results.
+             */
+            function getCalculation() {
+                const buyRate = parseFloat(buyRateInput.value) || 0;
+                const sellRate = parseFloat(sellRateInput.value) || 0;
+                const amount = parseFloat(amountInput.value) || 0;
+                const takerFeePercent = parseFloat(takerFeeInput.value) || 0;
+                const makerFeePercent = parseFloat(makerFeeInput.value) || 0;
+                const coinName = coinNameInput.value || 'COIN';
+
+                const coinAmount = buyRate > 0 ? amount / buyRate : 0;
+                const buyFee = amount * (takerFeePercent / 100);
+                const totalBuyCost = amount + buyFee;
+                const grossSellValue = coinAmount * sellRate;
+                const sellFee = grossSellValue * (makerFeePercent / 100);
+                const netSellValue = grossSellValue - sellFee;
+                const netProfit = netSellValue - totalBuyCost;
+                const profitPercentage = totalBuyCost > 0 ? (netProfit / totalBuyCost) * 100 : 0;
+
+                return {
+                    id: Date.now(), // Simple unique ID for the trade
+                    coinName, buyRate, sellRate, amount, takerFeePercent, makerFeePercent,
+                    coinAmount, totalBuyCost, grossSellValue, sellFee, netSellValue,
+                    netProfit, profitPercentage
+                };
+            }
+
+            /**
+             * Updates the main results card UI with calculated data.
+             */
+            function updateDisplay() {
+                const data = getCalculation();
+
+                netProfitEl.textContent = `${data.netProfit.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}`;
+                profitPercentageEl.textContent = `${data.profitPercentage.toFixed(2)}%`;
+                coinAmountEl.textContent = `${data.coinAmount.toFixed(8)} ${data.coinName.toUpperCase()}`;
+                totalBuyCostEl.textContent = `${data.totalBuyCost.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}`;
+                grossSellValueEl.textContent = `${data.grossSellValue.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}`;
+                sellFeeValueEl.textContent = `${data.sellFee.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}`;
+                netSellValueEl.textContent = `${data.netSellValue.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}`;
+
+                netProfitEl.classList.remove('profit', 'loss');
+                profitPercentageEl.classList.remove('profit', 'loss');
+
+                if (data.netProfit > 0) {
+                    netProfitEl.classList.add('profit');
+                    profitPercentageEl.classList.add('profit');
+                    resultLabelEl.textContent = 'Net Profit';
+                } else if (data.netProfit < 0) {
+                    netProfitEl.classList.add('loss');
+                    profitPercentageEl.classList.add('loss');
+                    resultLabelEl.textContent = 'Net Loss';
+                } else {
+                     resultLabelEl.textContent = 'Net Profit / Loss';
+                }
+            }
+
+            /**
+             * Renders the trade history table from local storage data.
+             */
+            function renderHistoryTable() {
+                const trades = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+                historyTableBody.innerHTML = ''; // Clear existing rows
+                
+                if (trades.length === 0) {
+                    historyTableBody.innerHTML = `<tr><td colspan="6" class="text-center px-6 py-4 text-gray-500">No saved trades yet.</td></tr>`;
+                    return;
+                }
+
+                trades.forEach(trade => {
+                    const row = document.createElement('tr');
+                    row.className = 'bg-gray-800 border-b border-gray-700 hover:bg-gray-600/50';
+                    
+                    const profitLossClass = trade.netProfit >= 0 ? 'profit' : 'loss';
+                    
+                    row.innerHTML = `
+                        <td class="px-6 py-4 font-medium whitespace-nowrap">${trade.coinName.toUpperCase()}</td>
+                        <td class="px-6 py-4">${trade.buyRate.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</td>
+                        <td class="px-6 py-4">${trade.sellRate.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</td>
+                        <td class="px-6 py-4">${trade.amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</td>
+                        <td class="px-6 py-4 font-bold ${profitLossClass}">${trade.netProfit.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</td>
+                        <td class="px-6 py-4 font-bold ${profitLossClass}">${trade.profitPercentage.toFixed(2)}%</td>
+                    `;
+                    historyTableBody.appendChild(row);
+                });
+            }
+
+            /**
+             * Saves the current trade from the form to local storage.
+             */
+            function saveTrade() {
+                const tradeData = getCalculation();
+                const trades = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+                trades.unshift(tradeData); // Add new trade to the beginning
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(trades));
+                renderHistoryTable();
+            }
+
+            /**
+             * Resets the form to its initial state.
+             */
+            function resetForm() {
+                coinNameInput.value = 'ETH';
+                buyRateInput.value = '2710';
+                sellRateInput.value = '2769';
+                amountInput.value = '200';
+                takerFeeInput.value = '0.1';
+                makerFeeInput.value = '0.1';
+                if (resultCard.classList.contains('flipped')) {
+                    resultCard.classList.remove('flipped');
+                }
+                updateDisplay();
+            }
+            
+            /**
+             * Clears all saved trades from local storage.
+             */
+            function clearHistory() {
+                // A simple confirmation before deleting
+                const userConfirmed = window.confirm("Are you sure you want to clear all trade history? This cannot be undone.");
+                if (userConfirmed) {
+                    localStorage.removeItem(STORAGE_KEY);
+                    renderHistoryTable();
+                }
+            }
+
+            // --- Event Listeners ---
+            form.addEventListener('input', updateDisplay);
+            saveButton.addEventListener('click', saveTrade);
+            resetButton.addEventListener('click', resetForm);
+            clearHistoryButton.addEventListener('click', clearHistory);
+            detailsButton.addEventListener('click', () => resultCard.classList.add('flipped'));
+            backButton.addEventListener('click', () => resultCard.classList.remove('flipped'));
+
+            // --- Initial Load ---
+            updateDisplay();
+            renderHistoryTable();
+        });
+    </script>
+</body>
+</html>
